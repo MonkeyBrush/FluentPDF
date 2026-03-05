@@ -56,7 +56,8 @@ public class CheckboxGroupComponent implements Component {
     public float measure(RenderContext ctx, float availableWidth) {
         float itemHeight = Math.max(boxSize, fontSize);
         if (horizontal) {
-            return spaceBefore + itemHeight + spaceAfter;
+            int rows = countRows(ctx, availableWidth);
+            return spaceBefore + rows * (itemHeight + itemSpacing) - itemSpacing + spaceAfter;
         }
         return spaceBefore + labels.size() * (itemHeight + itemSpacing) - itemSpacing + spaceAfter;
     }
@@ -69,6 +70,16 @@ public class CheckboxGroupComponent implements Component {
             float curY = y + spaceBefore;
 
             for (int i = 0; i < labels.size(); i++) {
+
+                // Horizontal wrapping: if this item would overflow, move to next row
+                if (horizontal && i > 0) {
+                    float itemWidth = measureItem(ctx, i);
+                    if (curX + itemWidth > x + width) {
+                        curX = x;
+                        curY += itemHeight + itemSpacing;
+                    }
+                }
+
                 float boxY = curY + (itemHeight - boxSize) / 2f;
 
                 // Box outline
@@ -99,6 +110,31 @@ public class CheckboxGroupComponent implements Component {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /** Measure the width of a single item (box + spacing + label + itemSpacing). */
+    private float measureItem(RenderContext ctx, int index) {
+        try {
+            float labelWidth = ctx.getTextWidth(labels.get(index), ctx.getRegularFont(), fontSize);
+            return boxSize + spacing + labelWidth + itemSpacing;
+        } catch (IOException e) {
+            return boxSize + spacing + 60f + itemSpacing;
+        }
+    }
+
+    /** Count how many rows are needed for horizontal layout at the given width. */
+    private int countRows(RenderContext ctx, float availableWidth) {
+        int rows = 1;
+        float curX = 0;
+        for (int i = 0; i < labels.size(); i++) {
+            float itemWidth = measureItem(ctx, i);
+            if (i > 0 && curX + itemWidth > availableWidth) {
+                rows++;
+                curX = 0;
+            }
+            curX += itemWidth;
+        }
+        return rows;
     }
 
     // -----------------------------------------------------------------------

@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 public class Document {
 
     private final List<PageDef> pages = new ArrayList<>();
+    private Footer footer;
 
     private Document() {}
 
@@ -68,6 +69,30 @@ public class Document {
      */
     public Document page(Consumer<ContentBuilder> configure) {
         return page(PageSettings.a4().margin(36).build(), configure);
+    }
+
+    // -----------------------------------------------------------------------
+    // Footer
+    // -----------------------------------------------------------------------
+
+    /**
+     * Configure a footer that appears on every page of the document.
+     *
+     * The footer supports left, centre, and right sections, each of which
+     * can contain the placeholders {@code {page}} and {@code {totalPages}}.
+     *
+     * <pre>
+     *   Document.create(doc -> doc
+     *       .footer(f -> f.center("Page {page} of {totalPages}").fontSize(8))
+     *       .page(page -> page.text("Hello"))
+     *   ).save("output.pdf");
+     * </pre>
+     */
+    public Document footer(Consumer<Footer> configure) {
+        Footer f = new Footer();
+        configure.accept(f);
+        this.footer = f;
+        return this;
     }
 
     // -----------------------------------------------------------------------
@@ -124,10 +149,20 @@ public class Document {
     private PDDocument buildPDDocument() throws IOException {
         PDDocument pdDoc = new PDDocument();
 
+        // Pass 1: render all page content (may create extra pages via auto-pagination)
         for (PageDef pageDef : pages) {
             RenderContext ctx = new RenderContext(pdDoc, pageDef.settings);
             pageDef.builder.stack.render(ctx, 0, 0, ctx.getContentWidth());
             ctx.close();
+        }
+
+        // Pass 2: stamp footer on every page (now that total page count is known)
+        if (footer != null && !pages.isEmpty()) {
+            PageSettings settings = pages.get(0).settings;
+            footer.render(pdDoc,
+                    settings.getMarginLeft(),
+                    settings.getMarginRight(),
+                    settings.getMarginBottom());
         }
 
         return pdDoc;

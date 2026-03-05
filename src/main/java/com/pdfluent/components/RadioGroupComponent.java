@@ -51,9 +51,10 @@ public class RadioGroupComponent implements Component {
     public float measure(RenderContext ctx, float availableWidth) {
         float itemHeight = Math.max(radius * 2, fontSize);
         if (horizontal) {
-            return spaceBefore + itemHeight + spaceAfter;
+            int rows = countRows(ctx, availableWidth);
+            return spaceBefore + rows * (itemHeight + itemSpacing) - itemSpacing + spaceAfter;
         } else {
-            return spaceBefore + options.size() * (itemHeight + itemSpacing) + spaceAfter;
+            return spaceBefore + options.size() * (itemHeight + itemSpacing) - itemSpacing + spaceAfter;
         }
     }
 
@@ -65,6 +66,16 @@ public class RadioGroupComponent implements Component {
             float curY = y + spaceBefore;
 
             for (int i = 0; i < options.size(); i++) {
+
+                // Horizontal wrapping: if this item would overflow, move to next row
+                if (horizontal && i > 0) {
+                    float itemWidth = measureItem(ctx, i);
+                    if (curX + itemWidth > x + width) {
+                        curX = x;
+                        curY += itemHeight + itemSpacing;
+                    }
+                }
+
                 float circleCx = curX + radius;
                 float circleCy = curY + itemHeight / 2f;
 
@@ -96,5 +107,30 @@ public class RadioGroupComponent implements Component {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /** Measure the width of a single item (circle + spacing + label + itemSpacing). */
+    private float measureItem(RenderContext ctx, int index) {
+        try {
+            float labelWidth = ctx.getTextWidth(options.get(index), ctx.getRegularFont(), fontSize);
+            return radius * 2 + spacing + labelWidth + itemSpacing;
+        } catch (IOException e) {
+            return radius * 2 + spacing + 60f + itemSpacing;
+        }
+    }
+
+    /** Count how many rows are needed for horizontal layout at the given width. */
+    private int countRows(RenderContext ctx, float availableWidth) {
+        int rows = 1;
+        float curX = 0;
+        for (int i = 0; i < options.size(); i++) {
+            float itemWidth = measureItem(ctx, i);
+            if (i > 0 && curX + itemWidth > availableWidth) {
+                rows++;
+                curX = 0;
+            }
+            curX += itemWidth;
+        }
+        return rows;
     }
 }

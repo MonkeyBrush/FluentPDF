@@ -52,6 +52,13 @@ public class Demo {
 
         Document.create(doc -> doc
 
+            .footer(f -> f
+                .left("Patient Intake Form1")
+                .right("Page {page} of {totalPages}")
+                .fontSize(8)
+                .color(Color.GRAY)
+            )
+
             .page(PageSettings.a4().margin(50).build(), page -> page
 
                 // ── Full-width header ────────────────────────────────────
@@ -128,6 +135,99 @@ public class Demo {
                     )
                 )
 
+                // ── Section: Allergies ──────────────────────────────────
+                .content(sectionHeader("Allergies"))
+
+                .text("Please list any known allergies (medications, food, environmental):").fontSize(9).spaceAfter(6)
+
+                .columns(cols -> cols
+                    .column(50, c -> c
+                        .text("Allergen", tc -> tc.bold().fontSize(9).spaceAfter(2))
+                        .content(blankLines(4))
+                    )
+                    .column(50, c -> c
+                        .text("Reaction / Severity", tc -> tc.bold().fontSize(9).spaceAfter(2))
+                        .content(blankLines(4))
+                    )
+                )
+
+                // ── Section: Family Medical History ─────────────────────
+                .content(sectionHeader("Family Medical History"))
+
+                .text("Please indicate if any immediate family members have been diagnosed with the following:").fontSize(9).spaceAfter(6)
+
+                .checkboxGroup(cg -> cg
+                    .item("Heart disease")
+                    .item("Diabetes")
+                    .item("Cancer")
+                    .item("Stroke")
+                    .item("High blood pressure")
+                    .item("Mental health conditions")
+                        .item("Any other problems")
+                    .horizontal()
+                    .boxSize(10)
+                    .fontSize(9)
+                    .itemSpacing(16)
+                    .spaceAfter(12)
+                )
+
+                .columns(cols -> cols
+                    .column(100, field("Please provide details if applicable"))
+                )
+
+                // ── Section: Lifestyle ──────────────────────────────────
+                .content(sectionHeader("Lifestyle"))
+
+                .text("Smoking Status").bold().fontSize(9).spaceAfter(4)
+
+                .radioGroup(rg -> rg
+                    .option("Never smoked")
+                    .option("Former smoker")
+                    .option("Current smoker")
+                    .horizontal()
+                    .fontSize(9)
+                    .itemSpacing(20)
+                    .spaceAfter(10)
+                )
+
+                .text("Alcohol Consumption").bold().fontSize(9).spaceAfter(4)
+
+                .radioGroup(rg -> rg
+                    .option("None")
+                    .option("Occasional")
+                    .option("Moderate")
+                    .option("Heavy")
+                    .horizontal()
+                    .fontSize(9)
+                    .itemSpacing(20)
+                    .spaceAfter(10)
+                )
+
+                .text("Exercise Frequency").bold().fontSize(9).spaceAfter(4)
+
+                .radioGroup(rg -> rg
+                    .option("Never")
+                    .option("1-2 times/week")
+                    .option("3-4 times/week")
+                    .option("5+ times/week")
+                    .horizontal()
+                    .fontSize(9)
+                    .itemSpacing(20)
+                    .spaceAfter(12)
+                )
+
+                // ── Section: Reason for Visit ───────────────────────────
+                .content(sectionHeader("Reason for Visit"))
+
+                .text("Please describe your symptoms or reason for today's appointment:").fontSize(9).spaceAfter(6)
+
+                .content(blankLines(5))
+
+                .columns(cols -> cols
+                    .column(50, field("Date symptoms began", "DD / MM / YYYY"))
+                    .column(50, field("Referred by", "___________________"))
+                )
+
                 // ── Section: Consent ─────────────────────────────────────
                 .content(sectionHeader("Consent & Declaration"))
 
@@ -135,18 +235,26 @@ public class Demo {
                     .item("I confirm the information provided is accurate to the best of my knowledge.", false)
                     .item("I consent to my information being shared with relevant clinical staff.", false)
                     .item("I agree to receive appointment reminders by email or SMS.", false)
+                    .item("I understand that I may withdraw my consent at any time in writing.", false)
                     .boxSize(10)
                     .fontSize(9)
                     .itemSpacing(6)
                     .spaceAfter(16)
                 )
 
-                // ── Full-width footer ────────────────────────────────────
+                // ── Signature block ─────────────────────────────────────
                 .line().thickness(1f).spaceBefore(8).spaceAfter(8)
 
                 .columns(cols -> cols
                     .column(50, field("Patient Signature"))
                     .column(50, field("Date", "DD / MM / YYYY"))
+                )
+
+                .spacer(12)
+
+                .columns(cols -> cols
+                    .column(50, field("Clinician Signature"))
+                    .column(50, field("Clinician Name"))
                 )
             )
 
