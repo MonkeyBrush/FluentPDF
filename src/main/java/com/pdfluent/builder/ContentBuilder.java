@@ -61,9 +61,9 @@ public class ContentBuilder {
      * component, use {@link #text(String, Consumer)} instead.
      */
     public TextAdder text(String content) {
-        TextComponent tc = new TextComponent(content);
-        stack.add(tc);
-        return new TextAdder(tc, this);
+        TextAdder ta = new TextAdder(content, this);
+        stack.add(ta);
+        return ta;
     }
 
     /**
@@ -82,9 +82,9 @@ public class ContentBuilder {
     // -----------------------------------------------------------------------
 
     public LineAdder line() {
-        LineComponent lc = new LineComponent();
-        stack.add(lc);
-        return new LineAdder(lc, this);
+        LineAdder la = new LineAdder(this);
+        stack.add(la);
+        return la;
     }
 
     public ContentBuilder spacer(float points) {
@@ -111,6 +111,39 @@ public class ContentBuilder {
     }
 
     // -----------------------------------------------------------------------
+    // Nested / reusable content
+    // -----------------------------------------------------------------------
+
+    /**
+     * Inline a block of content built by a function.  This is the key
+     * method for composing reusable content fragments.
+     *
+     * <p>Define a fragment once:</p>
+     * <pre>
+     *   Consumer&lt;ContentBuilder&gt; labeledField(String label) {
+     *       return c -> c
+     *           .text(label).bold().fontSize(9).spaceAfter(2)
+     *           .text("_______________________________").fontSize(10).spaceAfter(10);
+     *   }
+     * </pre>
+     *
+     * <p>Then reuse it anywhere:</p>
+     * <pre>
+     *   page
+     *       .content(labeledField("First Name"))
+     *       .content(labeledField("Last Name"))
+     *       .columns(cols -> cols
+     *           .column(50, labeledField("Email"))
+     *           .column(50, labeledField("Phone"))
+     *       )
+     * </pre>
+     */
+    public ContentBuilder content(Consumer<ContentBuilder> block) {
+        block.accept(this);
+        return this;
+    }
+
+    // -----------------------------------------------------------------------
     // Column layout
     // -----------------------------------------------------------------------
 
@@ -133,12 +166,9 @@ public class ContentBuilder {
 
         private final ContentBuilder parent;
 
-        TextAdder(TextComponent delegate, ContentBuilder parent) {
-            super(""); // won't be used — we re-delegate
+        TextAdder(String content, ContentBuilder parent) {
+            super(content);
             this.parent = parent;
-            // Copy delegate into stack — already done by the parent builder.
-            // This class is a thin façade that forward-declares the text
-            // component options while also providing access back to the parent.
         }
 
         // Override all TextComponent fluent methods to return TextAdder so
@@ -153,19 +183,21 @@ public class ContentBuilder {
         @Override public TextAdder spaceAfter(float pts)   { super.spaceAfter(pts);  return this; }
 
         // Pivot back to ContentBuilder
-        public TextAdder   text(String s)                          { return parent.text(s); }
-        public LineAdder   line()                                  { return parent.line(); }
-        public ContentBuilder spacer(float pts)                    { return parent.spacer(pts); }
-        public ContentBuilder radioGroup(Consumer<RadioGroupComponent> c)   { return parent.radioGroup(c); }
+        public TextAdder      text(String s)                          { return parent.text(s); }
+        public ContentBuilder text(String s, Consumer<TextComponent> cfg) { return parent.text(s, cfg); }
+        public LineAdder      line()                                  { return parent.line(); }
+        public ContentBuilder spacer(float pts)                       { return parent.spacer(pts); }
+        public ContentBuilder content(Consumer<ContentBuilder> block)  { return parent.content(block); }
+        public ContentBuilder radioGroup(Consumer<RadioGroupComponent> c)    { return parent.radioGroup(c); }
         public ContentBuilder checkboxGroup(Consumer<CheckboxGroupComponent> c) { return parent.checkboxGroup(c); }
-        public ContentBuilder columns(Consumer<ColumnLayoutBuilder> c)     { return parent.columns(c); }
+        public ContentBuilder columns(Consumer<ColumnLayoutBuilder> c)       { return parent.columns(c); }
     }
 
     public static class LineAdder extends LineComponent {
 
         private final ContentBuilder parent;
 
-        LineAdder(LineComponent delegate, ContentBuilder parent) {
+        LineAdder(ContentBuilder parent) {
             this.parent = parent;
         }
 
@@ -175,12 +207,14 @@ public class ContentBuilder {
         @Override public LineAdder spaceAfter(float pts)  { super.spaceAfter(pts);  return this; }
 
         // Pivot back
-        public TextAdder   text(String s)                          { return parent.text(s); }
-        public LineAdder   line()                                   { return parent.line(); }
-        public ContentBuilder spacer(float pts)                    { return parent.spacer(pts); }
-        public ContentBuilder radioGroup(Consumer<RadioGroupComponent> c)   { return parent.radioGroup(c); }
+        public TextAdder      text(String s)                          { return parent.text(s); }
+        public ContentBuilder text(String s, Consumer<TextComponent> cfg) { return parent.text(s, cfg); }
+        public LineAdder      line()                                   { return parent.line(); }
+        public ContentBuilder spacer(float pts)                        { return parent.spacer(pts); }
+        public ContentBuilder content(Consumer<ContentBuilder> block)   { return parent.content(block); }
+        public ContentBuilder radioGroup(Consumer<RadioGroupComponent> c)    { return parent.radioGroup(c); }
         public ContentBuilder checkboxGroup(Consumer<CheckboxGroupComponent> c) { return parent.checkboxGroup(c); }
-        public ContentBuilder columns(Consumer<ColumnLayoutBuilder> c)      { return parent.columns(c); }
+        public ContentBuilder columns(Consumer<ColumnLayoutBuilder> c)       { return parent.columns(c); }
     }
 
     /**

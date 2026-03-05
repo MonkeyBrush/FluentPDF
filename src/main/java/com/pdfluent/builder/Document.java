@@ -4,6 +4,7 @@ import com.pdfluent.core.PageSettings;
 import com.pdfluent.core.RenderContext;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -87,6 +88,33 @@ public class Document {
         try (PDDocument pdDoc = buildPDDocument()) {
             pdDoc.save(out);
         }
+    }
+
+    /**
+     * Render the document and return the PDF as a byte array.
+     *
+     * Ideal for web applications where the PDF is written straight to an
+     * HTTP response:
+     * <pre>
+     *   byte[] pdf = Document.create(doc -> doc
+     *       .page(page -> page.text("Hello"))
+     *   ).toByteArray();
+     *
+     *   // Spring MVC
+     *   return ResponseEntity.ok()
+     *       .contentType(MediaType.APPLICATION_PDF)
+     *       .header("Content-Disposition", "attachment; filename=\"report.pdf\"")
+     *       .body(pdf);
+     *
+     *   // Servlet
+     *   response.setContentType("application/pdf");
+     *   response.getOutputStream().write(pdf);
+     * </pre>
+     */
+    public byte[] toByteArray() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        save(baos);
+        return baos.toByteArray();
     }
 
     // -----------------------------------------------------------------------

@@ -1,9 +1,11 @@
 package com.pdfluent;
 
+import com.pdfluent.builder.ContentBuilder;
 import com.pdfluent.builder.Document;
 import com.pdfluent.core.PageSettings;
 
 import java.awt.Color;
+import java.util.function.Consumer;
 
 /**
  * Demo: generates a patient intake form PDF exercising all framework features.
@@ -13,15 +15,48 @@ import java.awt.Color;
  */
 public class Demo {
 
+    // ── Reusable content blocks ──────────────────────────────────────────
+    // Define once, use everywhere — in pages, columns, or nested layouts.
+
+    /** A labeled underline field. */
+    static Consumer<ContentBuilder> field(String label) {
+        return c -> c
+            .text(label, tc -> tc.bold().fontSize(9).spaceAfter(2))
+            .text("_______________________________", tc -> tc.fontSize(10).spaceAfter(10));
+    }
+
+    /** A labeled field with custom placeholder text. */
+    static Consumer<ContentBuilder> field(String label, String placeholder) {
+        return c -> c
+            .text(label, tc -> tc.bold().fontSize(9).spaceAfter(2))
+            .text(placeholder, tc -> tc.fontSize(10).spaceAfter(10));
+    }
+
+    /** A section header with a thin separator line above it. */
+    static Consumer<ContentBuilder> sectionHeader(String title) {
+        return c -> c
+            .line().thickness(0.5f).color(Color.LIGHT_GRAY).spaceBefore(4).spaceAfter(10)
+            .text(title, tc -> tc.fontSize(10).spaceAfter(10));
+    }
+
+    /** A repeated underline row for multi-line entry areas. */
+    static Consumer<ContentBuilder> blankLines(int count) {
+        return c -> {
+            for (int i = 0; i < count; i++) {
+                c.text("_______________________________", tc -> tc.spaceAfter(8));
+            }
+        };
+    }
+
     public static void main(String[] args) throws Exception {
 
         Document.create(doc -> doc
 
-            .page(PageSettings.a4().margin(10).build(), page -> page
+            .page(PageSettings.a4().margin(50).build(), page -> page
 
                 // ── Full-width header ────────────────────────────────────
                 .text("Patient Intake Form")
-                    .bold().fontSize(20).alignCenter().spaceAfter(6)
+                    .bold().fontSize(28).alignCenter().spaceAfter(6)
 
                 .text("Please complete all sections clearly.")
                     .fontSize(9).alignCenter().color(Color.GRAY).spaceAfter(10)
@@ -31,36 +66,20 @@ public class Demo {
                 // ── Section: Personal Details ────────────────────────────
                 .text("Personal Details").bold().fontSize(12).spaceAfter(8)
 
+                // Reusable field() blocks passed directly to columns
                 .columns(cols -> cols
-                    .column(50, left -> left
-                        .text("First Name", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("_______________________________", tc -> tc.fontSize(10).spaceAfter(10))
-                    )
-                    .column(50, right -> right
-                        .text("Last Name", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("_______________________________", tc -> tc.fontSize(10).spaceAfter(10))
-                    )
+                    .column(50, field("First Name"))
+                    .column(50, field("Last Name"))
                 )
 
                 .columns(cols -> cols
-                    .column(33, c -> c
-                        .text("Date of Birth", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("DD / MM / YYYY", tc -> tc.fontSize(10).spaceAfter(10))
-                    )
-                    .column(33, c -> c
-                        .text("Phone Number", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("___________________", tc -> tc.fontSize(10).spaceAfter(10))
-                    )
-                    .column(34, c -> c
-                        .text("Email Address", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("___________________", tc -> tc.fontSize(10).spaceAfter(10))
-                    )
+                    .column(33, field("Date of Birth", "DD / MM / YYYY"))
+                    .column(33, field("Phone Number", "___________________"))
+                    .column(34, field("Email Address", "___________________"))
                 )
 
                 // ── Section: Gender ──────────────────────────────────────
-                .line().thickness(0.5f).color(Color.LIGHT_GRAY).spaceBefore(4).spaceAfter(10)
-
-                .text("Gender").bold().fontSize(12).spaceAfter(8)
+                .content(sectionHeader("Gender"))
 
                 .radioGroup(rg -> rg
                     .selected(1)
@@ -77,9 +96,7 @@ public class Demo {
                 )
 
                 // ── Section: Medical History ─────────────────────────────
-                .line().thickness(0.5f).color(Color.LIGHT_GRAY).spaceBefore(4).spaceAfter(10)
-
-                .text("Medical History").bold().fontSize(12).spaceAfter(8)
+                .content(sectionHeader("Medical History"))
 
                 .text("Please tick any conditions that apply:").fontSize(9).spaceAfter(6)
 
@@ -98,29 +115,21 @@ public class Demo {
                 )
 
                 // ── Section: Current Medications ─────────────────────────
-                .line().thickness(0.5f).color(Color.LIGHT_GRAY).spaceBefore(4).spaceAfter(10)
-
-                .text("Current Medications").bold().fontSize(12).spaceAfter(8)
+                .content(sectionHeader("Current Medications"))
 
                 .columns(cols -> cols
-                    .column(60, left -> left
+                    .column(60, c -> c
                         .text("Medication Name", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("_______________________________", tc -> tc.spaceAfter(8))
-                        .text("_______________________________", tc -> tc.spaceAfter(8))
-                        .text("_______________________________", tc -> tc.spaceAfter(8))
+                        .content(blankLines(3))
                     )
-                    .column(40, right -> right
+                    .column(40, c -> c
                         .text("Dosage / Frequency", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("___________________", tc -> tc.spaceAfter(8))
-                        .text("___________________", tc -> tc.spaceAfter(8))
-                        .text("___________________", tc -> tc.spaceAfter(8))
+                        .content(blankLines(3))
                     )
                 )
 
                 // ── Section: Consent ─────────────────────────────────────
-                .line().thickness(0.5f).color(Color.LIGHT_GRAY).spaceBefore(4).spaceAfter(10)
-
-                .text("Consent & Declaration").bold().fontSize(12).spaceAfter(8)
+                .content(sectionHeader("Consent & Declaration"))
 
                 .checkboxGroup(cg -> cg
                     .item("I confirm the information provided is accurate to the best of my knowledge.", false)
@@ -136,14 +145,8 @@ public class Demo {
                 .line().thickness(1f).spaceBefore(8).spaceAfter(8)
 
                 .columns(cols -> cols
-                    .column(50, left -> left
-                        .text("Patient Signature", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("_______________________________", tc -> tc.fontSize(10))
-                    )
-                    .column(50, right -> right
-                        .text("Date", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .text("DD / MM / YYYY", tc -> tc.fontSize(10))
-                    )
+                    .column(50, field("Patient Signature"))
+                    .column(50, field("Date", "DD / MM / YYYY"))
                 )
             )
 
