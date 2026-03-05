@@ -108,7 +108,7 @@ public class Demo {
                 .text("Please tick any conditions that apply:").fontSize(9).spaceAfter(6)
 
                 .checkboxGroup(cg -> cg
-                    .item("Diabetes")
+                    .item("Diabetes").check(3)
                     .item("Hypertension")
                     .item("Heart disease")
                     .item("Asthma")

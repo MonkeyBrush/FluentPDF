@@ -90,9 +90,10 @@ public class CheckboxGroupComponent implements Component {
                     drawTick(ctx, curX, boxY);
                 }
 
-                // Label
+                // Label — vertically centred using cap height for optical alignment
                 float textX = curX + boxSize + spacing;
-                float textY = curY + (itemHeight - fontSize) / 2f;
+                float capHeight = ctx.getTextHeight(ctx.getRegularFont(), fontSize);
+                float textY = curY + itemHeight / 2f - fontSize + capHeight / 2f;
                 ctx.drawText(labels.get(i), ctx.getRegularFont(), fontSize, color, textX, textY);
 
                 if (horizontal) {
