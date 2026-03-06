@@ -7,6 +7,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -157,6 +158,25 @@ public class RenderContext {
     public void drawFilledCircle(float cx, float cy, float r,
                                  Color color) throws IOException {
         drawEllipse(cx, cy, r, r, color, 0, true);
+    }
+
+    // -----------------------------------------------------------------------
+    // Image drawing
+    // -----------------------------------------------------------------------
+
+    /**
+     * Draw an image at the given position in top-down content space.
+     *
+     * @param image  the PDFBox image object
+     * @param x      X from left content edge
+     * @param y      Y from top content edge (top of image)
+     * @param width  draw width in points
+     * @param height draw height in points
+     */
+    public void drawImage(PDImageXObject image, float x, float y,
+                          float width, float height) throws IOException {
+        float pdfY = toPdfY(y + height);
+        stream.drawImage(image, toAbsX(x), pdfY, width, height);
     }
 
     // -----------------------------------------------------------------------

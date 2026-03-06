@@ -52,14 +52,31 @@ public class Demo {
 
         Document.create(doc -> doc
 
+            .header(h -> h
+                .showAll()
+                .height(50)
+                .underline()
+                .columns(cols -> cols
+                    .column(60, col -> col
+                        .text("Meridian Health Group", tc -> tc.bold().fontSize(14).color(new Color(0, 80, 140)))
+                        .text("Family Medicine & Specialist Services", tc -> tc.fontSize(8).color(Color.GRAY))
+                    )
+                    .column(40, col -> col
+                        .text("42 Harley Street, London W1G 9PL", tc -> tc.fontSize(8).color(Color.DARK_GRAY).alignRight())
+                        .text("Tel: 020 7946 0958", tc -> tc.fontSize(8).color(Color.DARK_GRAY).alignRight())
+                        .text("www.meridianhealth.co.uk", tc -> tc.fontSize(8).color(new Color(0, 102, 204)).alignRight())
+                    )
+                )
+            )
+
             .footer(f -> f
-                .left("Patient Intake Form1")
+                .left("Patient Intake Form")
                 .right("Page {page} of {totalPages}")
                 .fontSize(8)
                 .color(Color.GRAY)
             )
 
-            .page(PageSettings.a4().margin(50).build(), page -> page
+            .page(PageSettings.a4().margin(70, 50, 50, 50).build(), page -> page
 
                 // ── Full-width header ────────────────────────────────────
                 .text("Patient Intake Form")

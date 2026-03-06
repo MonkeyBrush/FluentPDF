@@ -111,6 +111,42 @@ public class ContentBuilder {
     }
 
     // -----------------------------------------------------------------------
+    // Image
+    // -----------------------------------------------------------------------
+
+    /**
+     * Add an image from a file path and configure it via a consumer.
+     *
+     * <pre>
+     *   page.image("logo.png", img -&gt; img.width(120).height(40).spaceAfter(10));
+     * </pre>
+     */
+    public ContentBuilder image(String filePath, Consumer<ImageComponent> configure) {
+        ImageComponent ic = new ImageComponent(filePath);
+        configure.accept(ic);
+        stack.add(ic);
+        return this;
+    }
+
+    /**
+     * Add an image from a file path with default sizing.
+     */
+    public ContentBuilder image(String filePath) {
+        stack.add(new ImageComponent(filePath));
+        return this;
+    }
+
+    /**
+     * Add an image from raw bytes.
+     */
+    public ContentBuilder image(byte[] data, String type, Consumer<ImageComponent> configure) {
+        ImageComponent ic = new ImageComponent(data, type);
+        configure.accept(ic);
+        stack.add(ic);
+        return this;
+    }
+
+    // -----------------------------------------------------------------------
     // Nested / reusable content
     // -----------------------------------------------------------------------
 

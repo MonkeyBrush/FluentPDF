@@ -36,12 +36,29 @@ import java.io.IOException;
  */
 public class Footer {
 
+    /** Controls which pages the footer appears on. */
+    public enum DisplayMode { ALL, ONCE, EVEN, ODD }
+
     private String left;
     private String center;
     private String right;
-    private float  fontSize = 8f;
-    private Color  color    = Color.GRAY;
-    private boolean bold    = false;
+    private float  fontSize    = 8f;
+    private Color  color       = Color.GRAY;
+    private boolean bold       = false;
+    private DisplayMode displayMode = DisplayMode.ALL;
+
+    // -----------------------------------------------------------------------
+    // Display mode API
+    // -----------------------------------------------------------------------
+
+    /** Show footer on every page (default). */
+    public Footer showAll()  { this.displayMode = DisplayMode.ALL;  return this; }
+    /** Show footer on first page only. */
+    public Footer showOnce() { this.displayMode = DisplayMode.ONCE; return this; }
+    /** Show footer on even-numbered pages only (2, 4, 6 …). */
+    public Footer showEven() { this.displayMode = DisplayMode.EVEN; return this; }
+    /** Show footer on odd-numbered pages only (1, 3, 5 …). */
+    public Footer showOdd()  { this.displayMode = DisplayMode.ODD;  return this; }
 
     // -----------------------------------------------------------------------
     // Fluent API
@@ -81,6 +98,17 @@ public class Footer {
                 : new PDType1Font(Standard14Fonts.FontName.HELVETICA);
 
         for (int i = 0; i < totalPages; i++) {
+            int pageNum = i + 1;
+
+            // Apply display mode filter
+            boolean show = switch (displayMode) {
+                case ALL  -> true;
+                case ONCE -> pageNum == 1;
+                case EVEN -> pageNum % 2 == 0;
+                case ODD  -> pageNum % 2 != 0;
+            };
+            if (!show) continue;
+
             PDPage page = pdDoc.getPage(i);
             float pageWidth  = page.getMediaBox().getWidth();
 
@@ -92,8 +120,6 @@ public class Footer {
 
             try (PDPageContentStream cs = new PDPageContentStream(
                     pdDoc, page, PDPageContentStream.AppendMode.APPEND, true, true)) {
-
-                int pageNum = i + 1;
 
                 if (left != null) {
                     String resolved = resolve(left, pageNum, totalPages);

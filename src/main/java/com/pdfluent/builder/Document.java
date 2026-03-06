@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 public class Document {
 
     private final List<PageDef> pages = new ArrayList<>();
+    private Header header;
     private Footer footer;
 
     private Document() {}
@@ -69,6 +70,38 @@ public class Document {
      */
     public Document page(Consumer<ContentBuilder> configure) {
         return page(PageSettings.a4().margin(36).build(), configure);
+    }
+
+    // -----------------------------------------------------------------------
+    // Header
+    // -----------------------------------------------------------------------
+
+    /**
+     * Configure a header that is stamped onto pages during the second render
+     * pass.  Supports images, multiline text, column layouts, and display
+     * modes ({@code showAll}, {@code showOnce}, {@code showEven}, {@code showOdd}).
+     *
+     * <pre>
+     *   Document.create(doc -&gt; doc
+     *       .header(h -&gt; h
+     *           .height(60).showAll().underline()
+     *           .columns(cols -&gt; cols
+     *               .column(30, col -&gt; col.image("logo.png").width(80).height(40))
+     *               .column(70, col -&gt; col
+     *                   .text("My Company", tc -&gt; tc.bold().fontSize(14))
+     *                   .text("ABN: 12 345 678 901", tc -&gt; tc.fontSize(9).color(Color.GRAY))
+     *               )
+     *           )
+     *       )
+     *       .page(page -&gt; page.text("Hello"))
+     *   ).save("output.pdf");
+     * </pre>
+     */
+    public Document header(Consumer<Header> configure) {
+        Header h = new Header();
+        configure.accept(h);
+        this.header = h;
+        return this;
     }
 
     // -----------------------------------------------------------------------
@@ -156,13 +189,20 @@ public class Document {
             ctx.close();
         }
 
-        // Pass 2: stamp footer on every page (now that total page count is known)
-        if (footer != null && !pages.isEmpty()) {
+        // Pass 2: stamp header and footer (now that total page count is known)
+        if (!pages.isEmpty()) {
             PageSettings settings = pages.get(0).settings;
-            footer.render(pdDoc,
-                    settings.getMarginLeft(),
-                    settings.getMarginRight(),
-                    settings.getMarginBottom());
+
+            if (header != null) {
+                header.render(pdDoc, settings);
+            }
+
+            if (footer != null) {
+                footer.render(pdDoc,
+                        settings.getMarginLeft(),
+                        settings.getMarginRight(),
+                        settings.getMarginBottom());
+            }
         }
 
         return pdDoc;
