@@ -53,7 +53,7 @@ public class Demo {
         Document.create(doc -> doc
 
             .header(h -> h
-                .showAll()
+                .showOnce()
                 .height(50)
                 .underline()
                 .columns(cols -> cols

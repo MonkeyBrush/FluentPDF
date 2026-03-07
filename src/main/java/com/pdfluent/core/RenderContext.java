@@ -11,6 +11,7 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.util.function.IntFunction;
 
 /**
  * Wraps a PDFBox content stream and provides higher-level drawing primitives.
@@ -19,6 +20,10 @@ import java.io.IOException;
  * Y coordinates internally use PDFBox convention (origin bottom-left),
  * but the public API accepts "top-down" coordinates so callers think in
  * reading order (y=0 is the top margin, increasing downward).
+ *
+ * <p>Supports a per-page <em>top offset</em> that reclaims unused header
+ * space on pages where no header is rendered.  When the offset is non-zero
+ * the effective top margin shrinks, giving components more vertical room.</p>
  */
 public class RenderContext {
 
@@ -35,13 +40,36 @@ public class RenderContext {
 
     private final PageSettings settings;
 
+    /**
+     * Function that returns the top-margin offset for a given 1-based page
+     * number.  A positive value means "reclaim this many points of top
+     * margin" (i.e. the content area starts higher on the page).
+     * Defaults to zero (no offset) for every page.
+     */
+    private final IntFunction<Float> topOffsetFn;
+
+    /** Cached offset for the current page (recomputed in {@link #newPage()}). */
+    private float topOffset = 0;
+
     // -----------------------------------------------------------------------
     // Construction
     // -----------------------------------------------------------------------
 
     public RenderContext(PDDocument document, PageSettings settings) throws IOException {
-        this.document = document;
-        this.settings = settings;
+        this(document, settings, pageNum -> 0f);
+    }
+
+    /**
+     * Create a render context with a per-page top-margin offset function.
+     *
+     * @param topOffsetFn given a 1-based page number, returns how many points
+     *                    of top margin to reclaim (0 = use full margin)
+     */
+    public RenderContext(PDDocument document, PageSettings settings,
+                         IntFunction<Float> topOffsetFn) throws IOException {
+        this.document    = document;
+        this.settings    = settings;
+        this.topOffsetFn = topOffsetFn;
         newPage();
     }
 
@@ -57,7 +85,12 @@ public class RenderContext {
         document.addPage(currentPage);
         stream = new PDPageContentStream(document, currentPage,
                 PDPageContentStream.AppendMode.APPEND, true, true);
-        cursorY = 0; // reset to top margin
+
+        // Determine this page's top offset (page number is 1-based)
+        int pageNum = document.getNumberOfPages();
+        topOffset = topOffsetFn.apply(pageNum);
+
+        cursorY = 0; // reset to top of (effective) content area
     }
 
     /**
@@ -210,10 +243,14 @@ public class RenderContext {
                 - settings.getMarginRight();
     }
 
-    /** Full content height (page height minus top and bottom margins). */
+    /**
+     * Full content height for the current page.
+     * Accounts for per-page top offset: on pages without a header the
+     * effective top margin is reduced, yielding more content space.
+     */
     public float getContentHeight() {
         return settings.getMediaBox().getHeight()
-                - settings.getMarginTop()
+                - effectiveMarginTop()
                 - settings.getMarginBottom();
     }
 
@@ -235,10 +272,19 @@ public class RenderContext {
     // Private helpers
     // -----------------------------------------------------------------------
 
+    /**
+     * Effective top margin for the current page.  On pages where no header
+     * is rendered, the top offset reclaims space, moving content upward.
+     * Clamped to a minimum of 10pt to prevent content touching the page edge.
+     */
+    private float effectiveMarginTop() {
+        return Math.max(settings.getMarginTop() - topOffset, 10f);
+    }
+
     /** Convert top-down content Y to PDFBox bottom-up absolute Y. */
     private float toPdfY(float contentY) {
         return settings.getMediaBox().getHeight()
-                - settings.getMarginTop()
+                - effectiveMarginTop()
                 - contentY;
     }
 

@@ -196,12 +196,28 @@ public class Header {
     // -----------------------------------------------------------------------
 
     private boolean shouldShow(int pageNum, int totalPages) {
+        return shouldShowOnPage(pageNum);
+    }
+
+    /**
+     * Determine whether the header should appear on the given page number.
+     * Used by {@link com.pdfluent.core.RenderContext} during Pass 1 to
+     * reclaim header space on pages that won't display a header.
+     *
+     * @param pageNum 1-based page number
+     */
+    public boolean shouldShowOnPage(int pageNum) {
         return switch (displayMode) {
             case ALL  -> true;
             case ONCE -> pageNum == 1;
             case EVEN -> pageNum % 2 == 0;
             case ODD  -> pageNum % 2 != 0;
         };
+    }
+
+    /** Returns the configured header height in points. */
+    public float getHeight() {
+        return height;
     }
 
     // -----------------------------------------------------------------------

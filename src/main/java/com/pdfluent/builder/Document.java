@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
 
 /**
  * Top-level entry point for PDFluent.
@@ -182,9 +183,19 @@ public class Document {
     private PDDocument buildPDDocument() throws IOException {
         PDDocument pdDoc = new PDDocument();
 
+        // Build a per-page top-offset function: on pages where the header
+        // will NOT appear, reclaim its height so content starts higher.
+        IntFunction<Float> topOffsetFn;
+        if (header != null) {
+            final Header h = header;
+            topOffsetFn = pageNum -> h.shouldShowOnPage(pageNum) ? 0f : h.getHeight();
+        } else {
+            topOffsetFn = pageNum -> 0f;
+        }
+
         // Pass 1: render all page content (may create extra pages via auto-pagination)
         for (PageDef pageDef : pages) {
-            RenderContext ctx = new RenderContext(pdDoc, pageDef.settings);
+            RenderContext ctx = new RenderContext(pdDoc, pageDef.settings, topOffsetFn);
             pageDef.builder.stack.render(ctx, 0, 0, ctx.getContentWidth());
             ctx.close();
         }
