@@ -147,6 +147,29 @@ public class ContentBuilder {
         return this;
     }
 
+    /**
+     * Add an image from a {@link java.awt.image.BufferedImage} and configure it.
+     *
+     * <pre>
+     *   page.image(myBufferedImage, img -&gt; img.width(200).spaceAfter(10));
+     * </pre>
+     */
+    public ContentBuilder image(java.awt.image.BufferedImage bufferedImage,
+                                 Consumer<ImageComponent> configure) {
+        ImageComponent ic = new ImageComponent(bufferedImage);
+        configure.accept(ic);
+        stack.add(ic);
+        return this;
+    }
+
+    /**
+     * Add an image from a {@link java.awt.image.BufferedImage} with default sizing.
+     */
+    public ContentBuilder image(java.awt.image.BufferedImage bufferedImage) {
+        stack.add(new ImageComponent(bufferedImage));
+        return this;
+    }
+
     // -----------------------------------------------------------------------
     // Signature
     // -----------------------------------------------------------------------

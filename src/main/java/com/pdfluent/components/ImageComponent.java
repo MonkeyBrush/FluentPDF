@@ -2,21 +2,25 @@ package com.pdfluent.components;
 
 import com.pdfluent.core.Component;
 import com.pdfluent.core.RenderContext;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 /**
  * Renders an image (PNG, JPEG, etc.) within the content flow.
  *
- * <p>The image can be loaded from a file path or from raw byte data.
- * Width and height can be set explicitly; if only one dimension is given
- * the other is calculated to maintain aspect ratio.  If neither is given
- * the image renders at its natural pixel size (1 px = 1 pt).</p>
+ * <p>The image can be loaded from a file path, raw byte data, or a
+ * {@link java.awt.image.BufferedImage}.  Width and height can be set
+ * explicitly; if only one dimension is given the other is calculated to
+ * maintain aspect ratio.  If neither is given the image renders at its
+ * natural pixel size (1 px = 1 pt).</p>
  *
  * <p>Usage inside ContentBuilder:</p>
  * <pre>
  *   page.image("logo.png", img -&gt; img.width(120).height(40).spaceAfter(10));
+ *   page.image(myBufferedImage, img -&gt; img.width(200).spaceAfter(10));
  * </pre>
  */
 public class ImageComponent implements Component {
@@ -28,6 +32,7 @@ public class ImageComponent implements Component {
     private String imagePath;
     private byte[] imageBytes;
     private String imageType;          // e.g. "png", "jpg" — used with byte[] constructor
+    private BufferedImage bufferedImage;
 
     private float requestedWidth  = -1;
     private float requestedHeight = -1;
@@ -50,6 +55,11 @@ public class ImageComponent implements Component {
     public ImageComponent(byte[] data, String type) {
         this.imageBytes = data;
         this.imageType  = type;
+    }
+
+    /** Create an image component from a BufferedImage. */
+    public ImageComponent(BufferedImage image) {
+        this.bufferedImage = image;
     }
 
     // -----------------------------------------------------------------------
@@ -97,6 +107,8 @@ public class ImageComponent implements Component {
         } else if (imageBytes != null) {
             cachedImage = PDImageXObject.createFromByteArray(
                     ctx.getDocument(), imageBytes, imageType);
+        } else if (bufferedImage != null) {
+            cachedImage = LosslessFactory.createFromImage(ctx.getDocument(), bufferedImage);
         } else {
             throw new IllegalStateException("No image source set");
         }
