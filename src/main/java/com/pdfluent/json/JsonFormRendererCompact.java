@@ -11,50 +11,29 @@ import com.pdfluent.core.PageSettings;
 
 import java.awt.Color;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Renders a TATworks JSONFormDesign as a PDF using the PDFluent builder.
+ * Compact two-column variant of {@link JsonFormRenderer}.
  *
- * <p>Supported field types:</p>
- * <ul>
- *   <li>{@code HEADER}         — instruction / header text block</li>
- *   <li>{@code SECTIONSTART}   — section divider with bold title</li>
- *   <li>{@code SECTIONEND}     — section close (spacer)</li>
- *   <li>{@code TEXT}           — single-line text field</li>
- *   <li>{@code NAMEENTRY}      — name entry (rendered as text field)</li>
- *   <li>{@code DATE}           — date field (ISO instant or yyyy-MM-dd)</li>
- *   <li>{@code TIME}           — time field</li>
- *   <li>{@code NUMBER_INT}     — numeric field</li>
- *   <li>{@code COMMENT}        — multi-line text area</li>
- *   <li>{@code YESNO}          — Yes / No radio</li>
- *   <li>{@code YESNONA}        — Yes / No / N/A radio</li>
- *   <li>{@code GENDERMF}       — Male / Female radio</li>
- *   <li>{@code CHECKBOX}       — single on/off checkbox</li>
- *   <li>{@code MULTICHOICE}    — single or multi-choice (radio or checkbox group)</li>
- *   <li>{@code DROPDOWN}       — dropdown selection</li>
- *   <li>{@code SIGNATURE}      — signature line</li>
- *   <li>{@code PHOTO}          — photo placeholder</li>
- *   <li>{@code JSARL}          — Job Safety Analysis row (hazard / control / achieved)</li>
- *   <li>{@code WEBLINK}        — web link with description</li>
- *   <li>{@code QUESTIONSUMMARY}— quiz score summary</li>
- *   <li>{@code DUPLICATE}      — section duplicate marker (rendered as spacer)</li>
- * </ul>
+ * <p>Simple fields (text, date, radio, checkbox, dropdown, etc.) are rendered
+ * in a two-column (50/50) layout to save vertical space.  Complex or tall
+ * fields (headers, comments, signatures, photos) render full-width.</p>
  *
  * <p>Usage:</p>
  * <pre>
- *   Document doc = JsonFormRenderer.render(jsonString);
- *   doc.save("output.pdf");
- *
- *   byte[] pdf = JsonFormRenderer.render(jsonString).toByteArray();
+ *   Document doc = JsonFormRendererCompact.render(jsonString);
+ *   doc.save("output-compact.pdf");
  * </pre>
  */
-public class JsonFormRenderer {
+public class JsonFormRendererCompact {
 
     // -----------------------------------------------------------------------
     // Style constants
@@ -77,6 +56,13 @@ public class JsonFormRenderer {
 
     private static final DateTimeFormatter DISPLAY_DATE_FMT =
             DateTimeFormatter.ofPattern("dd / MM / yyyy");
+
+    /** Field types that render in two-column (compact) mode. */
+    private static final Set<String> COMPACT_TYPES = Set.of(
+            "TEXT", "NAMEENTRY", "NUMBER_INT", "DATE", "TIME",
+            "YESNO", "YESNONA", "GENDERMF", "CHECKBOX",
+            "DROPDOWN", "MULTICHOICE"
+    );
 
     // -----------------------------------------------------------------------
     // Public API
@@ -156,20 +142,93 @@ public class JsonFormRenderer {
                 page.text(formName).bold().fontSize(TITLE_FONT_SIZE).alignCenter().spaceAfter(6);
                 page.line().thickness(1.5f).spaceBefore(2).spaceAfter(14);
 
-                // Walk each field
-                for (int i = 0; i < fields.size(); i++) {
-                    JsonObject field = fields.get(i).getAsJsonObject();
-                    renderField(page, field);
-                }
+                // Walk fields with two-column buffering
+                renderFields(page, fields);
             })
         );
     }
 
     // -----------------------------------------------------------------------
-    // Field dispatch
+    // Two-column buffering logic
     // -----------------------------------------------------------------------
 
-    private static void renderField(ContentBuilder page, JsonObject field) {
+    private static void renderFields(ContentBuilder page, JsonArray fields) {
+        List<JsonObject> buffer = new ArrayList<>();
+
+        for (int i = 0; i < fields.size(); i++) {
+            JsonObject field = fields.get(i).getAsJsonObject();
+            String type = getString(field, "type", "");
+
+            if (COMPACT_TYPES.contains(type)) {
+                buffer.add(field);
+                if (buffer.size() == 2) {
+                    flushBuffer(page, buffer);
+                }
+            } else {
+                // Full-width field — flush any pending compact fields first
+                flushBuffer(page, buffer);
+                renderFieldFullWidth(page, field);
+            }
+        }
+        // Flush any trailing single field
+        flushBuffer(page, buffer);
+    }
+
+    /**
+     * Flush buffered compact fields.
+     * - 2 fields → render as 50/50 columns
+     * - 1 field  → render full-width
+     * - 0 fields → no-op
+     */
+    private static void flushBuffer(ContentBuilder page, List<JsonObject> buffer) {
+        if (buffer.isEmpty()) return;
+
+        if (buffer.size() == 2) {
+            JsonObject left  = buffer.get(0);
+            JsonObject right = buffer.get(1);
+            page.columns(cols -> cols
+                .column(50, c -> renderCompactField(c, left))
+                .column(50, c -> renderCompactField(c, right))
+            );
+        } else {
+            // Single remaining field — render full-width
+            renderCompactField(page, buffer.get(0));
+        }
+        buffer.clear();
+    }
+
+    // -----------------------------------------------------------------------
+    // Compact field renderer (for use inside columns)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Render a single compact field.  This is used both inside column
+     * contexts and when flushing a single remaining field full-width.
+     */
+    private static void renderCompactField(ContentBuilder page, JsonObject field) {
+        String type = getString(field, "type", "");
+        JsonObject data = field.has("fieldData") ? field.getAsJsonObject("fieldData") : null;
+        if (data == null) return;
+
+        switch (type) {
+            case "TEXT", "NAMEENTRY", "NUMBER_INT" -> renderTextField(page, data);
+            case "DATE"         -> renderDateField(page, data);
+            case "TIME"         -> renderTimeField(page, data);
+            case "YESNO"        -> renderYesNo(page, data, "Yes", "No");
+            case "YESNONA"      -> renderYesNo(page, data, "Yes", "No", "N/A");
+            case "GENDERMF"     -> renderGenderField(page, data);
+            case "CHECKBOX"     -> renderSingleCheckbox(page, data);
+            case "MULTICHOICE"  -> renderMultiChoice(page, data);
+            case "DROPDOWN"     -> renderDropdownField(page, data);
+            default             -> renderTextField(page, data);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Full-width field dispatch
+    // -----------------------------------------------------------------------
+
+    private static void renderFieldFullWidth(ContentBuilder page, JsonObject field) {
         String type = getString(field, "type", "");
         JsonObject data = field.has("fieldData") ? field.getAsJsonObject("fieldData") : null;
         if (data == null) return;
@@ -181,29 +240,8 @@ public class JsonFormRenderer {
             case "SECTIONEND"   -> renderSectionEnd(page);
             case "DUPLICATE"    -> renderDuplicate(page);
 
-            // Text input types
-            case "TEXT"         -> renderTextField(page, data);
-            case "NAMEENTRY"    -> renderTextField(page, data);
+            // Multi-line text
             case "COMMENT"      -> renderCommentField(page, field);
-            case "NUMBER_INT"   -> renderTextField(page, data);
-
-            // Date / time
-            case "DATE"         -> renderDateField(page, data);
-            case "TIME"         -> renderTimeField(page, data);
-
-            // Yes/No variants & gender
-            case "YESNO"        -> renderYesNo(page, data, "Yes", "No");
-            case "YESNONA"      -> renderYesNo(page, data, "Yes", "No", "N/A");
-            case "GENDERMF"     -> renderGenderField(page, data);
-
-            // Single checkbox (on/off toggle)
-            case "CHECKBOX"     -> renderSingleCheckbox(page, data);
-
-            // Multi-choice (radio or checkbox depending on isSingleChoiceOnly)
-            case "MULTICHOICE"  -> renderMultiChoice(page, data);
-
-            // Dropdown
-            case "DROPDOWN"     -> renderDropdownField(page, data);
 
             // Signature (JSON lines or SVG paths)
             case "SIGNATURE"    -> renderSignatureField(page, field, false);
@@ -212,7 +250,7 @@ public class JsonFormRenderer {
             // Photo placeholder
             case "PHOTO"        -> renderPhotoField(page, data);
 
-            // Job Safety Analysis row
+            // Job Safety Analysis row — 3 columns: 45/40/15
             case "JSARL"        -> renderJsarl(page, data);
 
             // Web link
@@ -266,7 +304,7 @@ public class JsonFormRenderer {
     }
 
     // -----------------------------------------------------------------------
-    // Comment (multi-line)
+    // Comment (multi-line) — always full-width
     // -----------------------------------------------------------------------
 
     private static void renderCommentField(ContentBuilder page, JsonObject field) {
@@ -274,7 +312,6 @@ public class JsonFormRenderer {
         String label = getString(data, "questionText", "");
         String value = getString(data, "plainValue", "");
 
-        // Use field.title as label if questionText is empty
         String displayLabel = label.isEmpty() ? getString(field, "title", "") : label;
 
         if (!displayLabel.isEmpty()) {
@@ -324,7 +361,6 @@ public class JsonFormRenderer {
             for (String opt : options) {
                 rg.option(opt);
             }
-            // Match selection
             for (int i = 0; i < options.length; i++) {
                 if (options[i].toLowerCase().startsWith(selected)) {
                     rg.selected(i);
@@ -382,7 +418,6 @@ public class JsonFormRenderer {
         JsonArray options = mc.has("options") ? mc.getAsJsonArray("options") : new JsonArray();
 
         if (isSingle) {
-            // Render as radio group
             page.radioGroup(rg -> {
                 for (int i = 0; i < options.size(); i++) {
                     JsonObject opt = options.get(i).getAsJsonObject();
@@ -394,13 +429,12 @@ public class JsonFormRenderer {
                 rg.horizontal().fontSize(LABEL_FONT_SIZE).itemSpacing(20).spaceAfter(10);
             });
         } else {
-            // Render as checkbox group
             page.checkboxGroup(cg -> {
                 for (int i = 0; i < options.size(); i++) {
                     JsonObject opt = options.get(i).getAsJsonObject();
                     String text = getString(opt, "displayText", "Option " + (i + 1));
-                    boolean selected = opt.has("isSelected") && opt.get("isSelected").getAsBoolean();
-                    cg.item(text, selected);
+                    boolean sel = opt.has("isSelected") && opt.get("isSelected").getAsBoolean();
+                    cg.item(text, sel);
                 }
                 cg.horizontal().boxSize(10).fontSize(LABEL_FONT_SIZE)
                   .itemSpacing(16).spaceAfter(10);
@@ -416,7 +450,6 @@ public class JsonFormRenderer {
         String label     = getString(data, "questionText", "");
         String rawValue  = getString(data, "plainValue", "");
 
-        // Resolve display text from the dropdown definition
         String display = rawValue;
         if (data.has("dropDown")) {
             JsonObject dd = data.getAsJsonObject("dropDown");
@@ -435,7 +468,7 @@ public class JsonFormRenderer {
     }
 
     // -----------------------------------------------------------------------
-    // Signature
+    // Signature — always full-width
     // -----------------------------------------------------------------------
 
     private static void renderSignatureField(ContentBuilder page, JsonObject field, boolean isSvg) {
@@ -445,18 +478,15 @@ public class JsonFormRenderer {
         String displayLabel = label.isEmpty() ? title : label;
         String rawValue = getString(data, "plainValue", "");
 
-        // Show label if present
         if (!displayLabel.isEmpty()) {
             page.text(displayLabel, tc -> tc.bold().fontSize(LABEL_FONT_SIZE).spaceAfter(4));
         }
 
-        // Parse strokes
         List<List<float[]>> strokes = isSvg
                 ? SignatureComponent.parseSignatureSvg(rawValue)
                 : SignatureComponent.parseSignatureJson(rawValue);
 
         if (!strokes.isEmpty()) {
-            // Render actual signature strokes
             page.signature(strokes, sig -> sig
                     .height(60)
                     .strokeWidth(1.2f)
@@ -464,12 +494,11 @@ public class JsonFormRenderer {
             );
         }
 
-        // Signature line below
         page.text("Signature: " + BLANK_LINE, tc -> tc.fontSize(VALUE_FONT_SIZE).spaceAfter(10));
     }
 
     // -----------------------------------------------------------------------
-    // Photo placeholder
+    // Photo placeholder — always full-width
     // -----------------------------------------------------------------------
 
     private static void renderPhotoField(ContentBuilder page, JsonObject data) {
@@ -480,7 +509,7 @@ public class JsonFormRenderer {
     }
 
     // -----------------------------------------------------------------------
-    // JSARL — Job Safety Analysis row
+    // JSARL — Job Safety Analysis row (45/40/15 split)
     // -----------------------------------------------------------------------
 
     private static void renderJsarl(ContentBuilder page, JsonObject data) {
@@ -492,14 +521,14 @@ public class JsonFormRenderer {
         String achieved = getString(jsarl, "controlAchieved", "");
 
         page.columns(cols -> cols
-            .column(40, c -> c.content(labeledFieldWithValue("Hazard", hazard.isEmpty() ? BLANK_LINE : hazard)))
+            .column(45, c -> c.content(labeledFieldWithValue("Hazard", hazard.isEmpty() ? BLANK_LINE : hazard)))
             .column(40, c -> c.content(labeledFieldWithValue("Control", control.isEmpty() ? BLANK_LINE : control)))
-            .column(20, c -> c.content(labeledFieldWithValue("Achieved", achieved.isEmpty() ? BLANK_LINE : achieved)))
+            .column(15, c -> c.content(labeledFieldWithValue("Achieved", achieved.isEmpty() ? BLANK_LINE : achieved)))
         );
     }
 
     // -----------------------------------------------------------------------
-    // Web link
+    // Web link — always full-width
     // -----------------------------------------------------------------------
 
     private static void renderWebLink(ContentBuilder page, JsonObject data) {
@@ -516,7 +545,7 @@ public class JsonFormRenderer {
     }
 
     // -----------------------------------------------------------------------
-    // Questionnaire summary
+    // Questionnaire summary — always full-width
     // -----------------------------------------------------------------------
 
     private static void renderQuestionSummary(ContentBuilder page, JsonObject data) {
@@ -575,15 +604,12 @@ public class JsonFormRenderer {
         return defaultValue;
     }
 
-    /** Format a date string — handles both ISO instants and yyyy-MM-dd. */
     private static String formatDate(String raw) {
         if (raw == null || raw.isEmpty()) return "DD / MM / YYYY";
         try {
-            // Try ISO instant first (e.g. "2024-09-18T02:58:18.098Z")
             return DISPLAY_DATE_FMT.format(Instant.parse(raw).atZone(ZoneId.systemDefault()));
         } catch (Exception e1) {
             try {
-                // Try plain date (e.g. "2026-03-05")
                 return DISPLAY_DATE_FMT.format(LocalDate.parse(raw));
             } catch (Exception e2) {
                 return raw;

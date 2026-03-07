@@ -20,19 +20,14 @@ public class JsonFormExample {
 
         // ── One-liner: JSON in → PDF out ─────────────────────────────────
 
-        Document doc = JsonFormRenderer.render(json);
-        doc.save("./student-driving-licence.pdf");
+        // ── Standard layout: one field per row ──────────────────────────
+        Document doc = JsonFormRenderer.render(json, "Baz");
+        doc.save("./all-controls.pdf");
+        System.out.println("PDF generated: all-controls.pdf");
 
-        System.out.println("PDF generated: student-driving-licence.pdf");
-
-        // ── Or for a web application ─────────────────────────────────────
-        //
-        // byte[] pdf = JsonFormRenderer.render(json).toByteArray();
-        //
-        // return ResponseEntity.ok()
-        //     .contentType(MediaType.APPLICATION_PDF)
-        //     .header("Content-Disposition",
-        //             "attachment; filename=\"student-driving-licence.pdf\"")
-        //     .body(pdf);
+        // ── Compact layout: two-column where possible ───────────────────
+        Document compact = JsonFormRendererCompact.render(json, "Baz");
+        compact.save("./all-controls-compact.pdf");
+        System.out.println("PDF generated: all-controls-compact.pdf");
     }
 }

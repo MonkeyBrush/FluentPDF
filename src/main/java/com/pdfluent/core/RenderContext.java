@@ -194,6 +194,35 @@ public class RenderContext {
     }
 
     // -----------------------------------------------------------------------
+    // Polyline / path drawing
+    // -----------------------------------------------------------------------
+
+    /**
+     * Draw a connected series of line segments (polyline) in top-down
+     * content space.  Each point is {@code {x, y}} relative to the
+     * content area origin.
+     *
+     * @param points    array of {@code {x, y}} pairs — at least 2 required
+     * @param color     stroke colour
+     * @param lineWidth stroke width in points
+     */
+    public void drawPolyline(float[][] points, Color color, float lineWidth)
+            throws IOException {
+        if (points == null || points.length < 2) return;
+
+        stream.setStrokingColor(color);
+        stream.setLineWidth(lineWidth);
+        stream.setLineJoinStyle(1);  // round join for smooth signature strokes
+        stream.setLineCapStyle(1);   // round caps
+
+        stream.moveTo(toAbsX(points[0][0]), toPdfY(points[0][1]));
+        for (int i = 1; i < points.length; i++) {
+            stream.lineTo(toAbsX(points[i][0]), toPdfY(points[i][1]));
+        }
+        stream.stroke();
+    }
+
+    // -----------------------------------------------------------------------
     // Image drawing
     // -----------------------------------------------------------------------
 

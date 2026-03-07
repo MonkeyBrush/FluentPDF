@@ -5,6 +5,7 @@ import com.pdfluent.layout.ColumnLayout;
 import com.pdfluent.layout.StackLayout;
 
 import java.awt.Color;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -143,6 +144,34 @@ public class ContentBuilder {
         ImageComponent ic = new ImageComponent(data, type);
         configure.accept(ic);
         stack.add(ic);
+        return this;
+    }
+
+    // -----------------------------------------------------------------------
+    // Signature
+    // -----------------------------------------------------------------------
+
+    /**
+     * Add a rendered signature from pre-parsed stroke data and configure it.
+     *
+     * <pre>
+     *   List&lt;List&lt;float[]&gt;&gt; strokes = SignatureComponent.parseSignatureJson(json);
+     *   page.signature(strokes, sig -&gt; sig.height(60).color(Color.DARK_GRAY));
+     * </pre>
+     */
+    public ContentBuilder signature(List<List<float[]>> strokes,
+                                     Consumer<SignatureComponent> configure) {
+        SignatureComponent sc = new SignatureComponent(strokes);
+        configure.accept(sc);
+        stack.add(sc);
+        return this;
+    }
+
+    /**
+     * Add a rendered signature with default styling.
+     */
+    public ContentBuilder signature(List<List<float[]>> strokes) {
+        stack.add(new SignatureComponent(strokes));
         return this;
     }
 
