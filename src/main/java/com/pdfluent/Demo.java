@@ -141,15 +141,28 @@ public class Demo {
                 // ── Section: Current Medications ─────────────────────────
                 .content(sectionHeader("Current Medications"))
 
-                .columns(cols -> cols
-                    .column(60, c -> c
-                        .text("Medication Name", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .content(blankLines(3))
+                .table(t -> t
+                    .column(40)
+                    .column(25, col -> col.alignCenter())
+                    .column(20, col -> col.alignCenter())
+                    .column(15, col -> col.alignRight())
+
+                    .headerRow("Medication", "Dosage", "Frequency", "Since")
+
+                    .row("Metformin",       "500 mg",  "Twice daily", "2022")
+                    .row("Lisinopril",      "10 mg",   "Once daily",  "2023")
+                    .row("Atorvastatin",    "20 mg",   "At bedtime",  "2024")
+
+                    .footerRow(r -> r
+                        .cell("Total medications: 3", c -> c.columnSpan(4).italic()
+                              .alignRight().fontSize(8).color(Color.GRAY))
                     )
-                    .column(40, c -> c
-                        .text("Dosage / Frequency", tc -> tc.bold().fontSize(9).spaceAfter(2))
-                        .content(blankLines(3))
-                    )
+
+                    .alternateRowColor(new Color(245, 245, 250))
+                    .border(b -> b.color(Color.LIGHT_GRAY).width(0.5f))
+                    .cellPadding(5)
+                    .headerFontSize(9)
+                    .fontSize(9)
                 )
 
                 // ── Section: Allergies ──────────────────────────────────

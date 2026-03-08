@@ -151,6 +151,20 @@ public class RenderContext {
     }
 
     /**
+     * Draw a vertical line.
+     */
+    public void drawVerticalLine(float x, float y, float height,
+                                  Color color, float lineWidth) throws IOException {
+        float pdfY1 = toPdfY(y);
+        float pdfY2 = toPdfY(y + height);
+        stream.setStrokingColor(color);
+        stream.setLineWidth(lineWidth);
+        stream.moveTo(toAbsX(x), pdfY1);
+        stream.lineTo(toAbsX(x), pdfY2);
+        stream.stroke();
+    }
+
+    /**
      * Draw a rectangle outline.
      */
     public void drawRect(float x, float y, float width, float height,

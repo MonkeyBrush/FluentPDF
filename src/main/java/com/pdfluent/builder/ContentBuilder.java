@@ -199,6 +199,29 @@ public class ContentBuilder {
     }
 
     // -----------------------------------------------------------------------
+    // Table
+    // -----------------------------------------------------------------------
+
+    /**
+     * Add a table and configure it via a {@link TableBuilder}.
+     *
+     * <pre>
+     *   page.table(t -&gt; t
+     *       .column(30).column(40).column(30)
+     *       .headerRow("ID", "Item", "Price")
+     *       .row("001", "Widget", "$9.99")
+     *       .alternateRowColor(new Color(245, 245, 245))
+     *   );
+     * </pre>
+     */
+    public ContentBuilder table(Consumer<TableBuilder> configure) {
+        TableBuilder tb = new TableBuilder();
+        configure.accept(tb);
+        stack.add(tb.build());
+        return this;
+    }
+
+    // -----------------------------------------------------------------------
     // Nested / reusable content
     // -----------------------------------------------------------------------
 
