@@ -131,7 +131,7 @@ public class JsonFormRenderer {
                 .height(36).showAll().underline()
                 .columns(cols -> cols
                     .column(50, col -> col
-                        .text(formName, tc -> tc.bold().fontSize(HEADER_FONT_SIZE))
+                        .text("TATworks", tc -> tc.bold().fontSize(HEADER_FONT_SIZE))
                     )
                     .column(50, col -> {
                         if (!resolvedBy.isEmpty()) {

@@ -1,12 +1,14 @@
-package com.pdfluent.json;
+package com.pdfluent.examples;
 
 import com.pdfluent.builder.Document;
+import com.pdfluent.json.JsonFormRenderer;
+import com.pdfluent.json.JsonFormRendererCompact;
 
 /**
  * Example: render a TATworks JSONFormDesign as a PDF.
  *
  * Run with:
- *   mvn compile exec:java -Dexec.mainClass=com.pdfluent.json.JsonFormExample
+ *   mvn -pl pdfluent-examples exec:java -Dexec.mainClass=com.pdfluent.examples.JsonFormExample
  */
 public class JsonFormExample {
 

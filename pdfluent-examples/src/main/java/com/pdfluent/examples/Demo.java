@@ -1,4 +1,4 @@
-package com.pdfluent;
+package com.pdfluent.examples;
 
 import com.pdfluent.builder.ContentBuilder;
 import com.pdfluent.builder.Document;
@@ -11,7 +11,7 @@ import java.util.function.Consumer;
  * Demo: generates a patient intake form PDF exercising all framework features.
  *
  * Run with:
- *   mvn compile exec:java -Dexec.mainClass=com.pdfluent.Demo
+ *   mvn -pl pdfluent-examples exec:java -Dexec.mainClass=com.pdfluent.examples.Demo
  */
 public class Demo {
 
