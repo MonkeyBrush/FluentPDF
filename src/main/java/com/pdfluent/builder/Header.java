@@ -21,7 +21,7 @@ import java.util.function.Consumer;
  * and multi-column layouts.  The header is stamped onto pages during the second
  * rendering pass, after all content pages have been created.
  *
- * <h3>Display modes</h3>
+ * <h2>Display modes</h2>
  * <ul>
  *   <li>{@link #showAll()}  — every page (default)</li>
  *   <li>{@link #showOnce()} — first page only</li>
@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  *   <li>{@link #showOdd()}  — odd-numbered pages (1, 3, 5 …)</li>
  * </ul>
  *
- * <h3>Content modes</h3>
+ * <h2>Content modes</h2>
  * Use either the simple text API or the column layout — not both:
  *
  * <p><strong>Simple text:</strong></p>
